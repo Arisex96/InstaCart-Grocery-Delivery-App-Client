@@ -138,7 +138,7 @@ export const dummyProducts = [
       "https://raw.githubusercontent.com/avinashdm/gs-images/main/greencart/zvoeqbvrbrt7atqj0dbu.png",
     category: "bakery",
     unit: "100g",
-    stock: 100,
+    stock: 0,
     isOrganic: false,
     rating: 4.5,
     reviewCount: 12,

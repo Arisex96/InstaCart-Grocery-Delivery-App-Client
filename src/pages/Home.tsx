@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router";
 import { ArrowRightIcon, LeafIcon, MailIcon } from "lucide-react";
 import {

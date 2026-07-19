@@ -5,6 +5,7 @@ import { ArrowLeft, CheckIcon, Leaf, Star, XIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useMemo } from "react";
 import useCartStore from "../store/useCartStore";
+import ProductGrid from "../components/ProductGrid";
 
 const HalfStar = ({ size = 16 }: { size?: number }) => (
   <div
@@ -153,20 +154,23 @@ const ProductPage = () => {
               </span>
             </div>
             <p className="text-lg">{product.description}</p>
-            <p className="flex items-center gap-1 text-sm text-green-600 font-semibold">
+            <p className="flex items-center gap-1 text-sm font-semibold">
               {product.stock ? (
                 <>
-                  <CheckIcon className="size-4" />
-                  {`In Stock (${product.stock})`}
+                  <CheckIcon className="size-4  text-green-600" />
+                  <span  className="text-green-600">In Stock ({product.stock})</span>
                 </>
               ) : (
                 <>
-                  <XIcon className="size-4" />
-                  Out of Stock
+                  <XIcon className="size-4 text-red-600" />
+                  <span className="text-red-600">Out of Stock</span>
                 </>
               )}
             </p>{" "}
-            <div className="flex items-center gap-2 mb-4">
+
+            {/* Quantity and Add to Cart */}
+            {product.stock>0?(
+              <div className="flex items-center gap-2 mb-4">
               <div className="flex gap-2">
                 <button
                   className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg"
@@ -197,7 +201,16 @@ const ProductPage = () => {
                 Add to Cart
               </button>
             </div>
-          </div>
+            ):(
+              <div className="flex items-center gap-2 mb-4">
+              <button className="bg-app-orange text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                Out of Stock
+              </button>
+            </div>
+            )}
+            </div>
+            
+
         </div>
         {/** =Customer review */}
         <div className="flex flex-col gap-6 mt-10">
@@ -259,6 +272,11 @@ const ProductPage = () => {
               )}
             </div>
           </div>
+        </div>
+        {/**View similar category products */}
+        <div className="flex flex-col gap-4 mt-10">
+          <h2 className="text-2xl text-black font-semibold">Similar Products</h2>
+          <ProductGrid products={dummyProducts} category={product.category} />
         </div>
       </div>
     </>

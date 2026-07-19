@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import hero_bg from "../assets/hero_bg.jpeg";
 import {
   BikeIcon,
   UserIcon,
-  EyeIcon,
-  EyeOffIcon,
   MailIcon,
   LockIcon,
   Loader2Icon

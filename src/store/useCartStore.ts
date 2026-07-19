@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Product, CartItem, CartState } from "../types";
+import type { CartItem, CartState } from "../types";
 import { dummyProducts } from "../assets/assets";
 
 // i m practising writing a store by myself

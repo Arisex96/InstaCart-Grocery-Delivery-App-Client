@@ -7,7 +7,7 @@ import SearchResults from "./pages/SearchResults";
 import Home from "./pages/Home";
 import FlashDeals from "./pages/FlashDeals";
 import Checkout from "./pages/Checkout";
-import Myorders from "./pages/Myorders";
+import MyOrders from "./pages/MyOrders";
 import OrderTracking from "./pages/OrderTracking";
 import Addresses from "./pages/Addresses";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -27,7 +27,7 @@ const App = () => {
           <Route path="deals" element={<FlashDeals />} />
           <Route element={<ProtectedRoute />}>
             <Route path="checkout" element={<Checkout />} />
-            <Route path="my-orders" element={<Myorders />} />
+            <Route path="my-orders" element={<MyOrders />} />
             <Route path="order/:id" element={<OrderTracking />} />
             <Route path="addresses" element={<Addresses />} />
           </Route>

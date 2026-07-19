@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import useCartStore from "../store/useCartStore";
 import { X, ShoppingCart, Trash2 } from "lucide-react";
+import type { CartItem, CartState } from "../types";
 
 const CartSideBar = () => {
   const {
@@ -10,10 +11,8 @@ const CartSideBar = () => {
     isCartOpen,
 
     toggle_cart_view,
-    add_item,
     remove_item,
     update_quantity,
-    clear_cart,
   } = useCartStore();
 
   useEffect(() => {
@@ -117,7 +116,13 @@ const CartSideBar = () => {
   );
 };
 
-const Item_card = ({ item, update_quantity, remove_item }) => {
+interface ItemCardProps {
+  item: CartItem;
+  update_quantity: CartState["update_quantity"];
+  remove_item: CartState["remove_item"];
+}
+
+const Item_card = ({ item, update_quantity, remove_item }: ItemCardProps) => {
   {
     /** image,name ,unit, +,- update quantity, remove button */
   }
