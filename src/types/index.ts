@@ -82,9 +82,19 @@ export interface DeliveryPartner {
 
 export interface Order {
   _id: string;
-  user: string | { _id: string; name: string; email: string; phone?: string };
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
   items: OrderItem[];
-  shippingAddress: Omit<Address, "_id" | "isDefault">;
+  liveLocation: {
+    lat: number;
+    lng: number;
+    updatedAt:string;
+  };
+  shippingAddress: Address;
   paymentMethod: string;
   subtotal: number;
   deliveryFee: number;

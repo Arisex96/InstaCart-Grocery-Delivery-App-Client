@@ -2,7 +2,9 @@ import type { Order } from "../types";
 import { useState, useEffect } from "react";
 
 import { dummyDashboardOrdersData } from "../assets/assets";
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import {  ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+
+import { useNavigate } from "react-router-dom";   
 
 const MyOrders = (): any => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -71,6 +73,8 @@ const OrderCard = ({ order }: { order: Order }) => {
   //type will be a enum of ["Placed","Out for Delivery","Delivered"]
 
   const [showOrderTableId, setShowOrderTableId] = useState<string | null>(null);
+  const navigator = useNavigate();
+
 
   const status_tab = (status: string) => {
     const bg_color =
@@ -89,6 +93,9 @@ const OrderCard = ({ order }: { order: Order }) => {
     return (
       <button
         className={`${bg_color} px-4 h-8 text-sm rounded-full flex items-center justify-center`}
+        onClick={() => {
+          navigator(`/order-tracking/${order._id}`);
+        }}
       >
         {status}{" "}
         <span className="ml-2">
