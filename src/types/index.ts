@@ -22,6 +22,13 @@ export interface Address {
   lng: number;
 }
 
+export interface UserState extends User {
+  add_address: (address: Address) => void;
+  remove_address: (address_id: string) => void;
+  update_address: (address: Address) => void;
+  set_default_address: (address_id: string) => void;
+}
+
 export interface Category {
   slug: string;
   name: string;
@@ -92,7 +99,7 @@ export interface Order {
   liveLocation: {
     lat: number;
     lng: number;
-    updatedAt:string;
+    updatedAt: string;
   };
   shippingAddress: Address;
   paymentMethod: string;

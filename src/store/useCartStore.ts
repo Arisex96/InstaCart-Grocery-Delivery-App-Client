@@ -27,7 +27,10 @@ const dummy_cart_item: CartItem[] = [
   },
 ];
 
+
 const useCartStore = create<CartState>((set) => ({
+  
+
   
   items: dummy_cart_item,
   total_price: dummy_cart_item.reduce(

@@ -1,48 +1,17 @@
 import { Check, MapPinIcon, Pencil, Plus, Trash2, X } from "lucide-react";
-import type { Address, User } from "../types";
+import type { Address } from "../types";
 import { useState } from "react";
-
-export const dummyAddress: Address = {
-  _id: "addr_001",
-  label: "Home",
-  address: "123 New Market Road",
-  city: "New York",
-  state: "NY",
-  zip: "10001",
-  isDefault: true,
-  lat: 40.7128,
-  lng: -74.006,
-};
-
-export const dummyUser: User = {
-  _id: "user_001",
-  name: "Admin",
-  email: "admin@example.com",
-  phone: "+1 9876543210",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  addresses: [
-    dummyAddress,
-    {
-      _id: "addr_002",
-      label: "Office",
-      address: "456 Wall Street",
-      city: "New York",
-      state: "NY",
-      zip: "10005",
-      isDefault: false,
-      lat: 40.706,
-      lng: -74.0086,
-    },
-  ],
-  isAdmin: true,
-  createdAt: "2026-04-01T09:00:00.000Z",
-  updatedAt: "2026-04-06T08:47:28.984Z",
-};
+import useUserStore from "../store/useUserStore";
 
 const Addresses = () => {
-  const [isOverlayOn, setIsOverlayOn] = useState(true);
+  const [isOverlayOn, setIsOverlayOn] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
 
-  const [addresses, setAddresses] = useState<Address[]>(dummyUser.addresses);
+  const addresses = useUserStore((state) => state.addresses);
+  const remove_address = useUserStore((state) => state.remove_address);
+  const set_default_address = useUserStore(
+    (state) => state.set_default_address,
+  );
 
   return (
     <main className="max-w-7xl mx-auto p-4 flex flex-col gap-6 mb-10 mt-4 min-h-screen">
@@ -50,7 +19,7 @@ const Addresses = () => {
       <section className="flex justify-between items-center gap-2">
         <p className="text-3xl font-semibold">My Addresses</p>
         <button
-          className="bg-app-green text-white p-2 rounded-lg flex items-center gap-2"
+          className="bg-app-green text-white p-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
           onClick={() => setIsOverlayOn(true)}
         >
           <Plus />
@@ -60,18 +29,39 @@ const Addresses = () => {
 
       {/** Addresses List */}
       <section className="flex flex-col gap-4 items-start">
-        {addresses.map((address) => (
-          <AddressCard key={address._id} address={address} />
-        ))}
+        {addresses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg w-[600px] border border-dashed border-gray-300 text-gray-500">
+            <MapPinIcon size={40} className="mb-2 text-gray-400" />
+            <p className="text-sm">
+              No addresses saved. Add one to get started!
+            </p>
+          </div>
+        ) : (
+          addresses.map((address) => (
+            <AddressCard
+              key={address._id}
+              address={address}
+              onEdit={() => setEditingAddress(address)}
+              onDelete={() => remove_address(address._id)}
+              onSetDefault={() => set_default_address(address._id)}
+            />
+          ))
+        )}
       </section>
 
       {/** Overlay */}
-      {isOverlayOn && <AddressForm setIsOverlayOn={setIsOverlayOn} />}
+      {(isOverlayOn || editingAddress) && (
+        <AddressForm
+          addressToEdit={editingAddress}
+          onClose={() => {
+            setIsOverlayOn(false);
+            setEditingAddress(null);
+          }}
+        />
+      )}
     </main>
   );
 };
-
-
 
 interface AddressFormData {
   label: string;
@@ -82,14 +72,19 @@ interface AddressFormData {
   isDefault: boolean;
 }
 
-const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => void }) => {
+interface AddressFormProps {
+  addressToEdit: Address | null;
+  onClose: () => void;
+}
+
+const AddressForm = ({ addressToEdit, onClose }: AddressFormProps) => {
   const [formData, setFormData] = useState<AddressFormData>({
-    label: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    isDefault: false,
+    label: addressToEdit?.label || "",
+    address: addressToEdit?.address || "",
+    city: addressToEdit?.city || "",
+    state: addressToEdit?.state || "",
+    zip: addressToEdit?.zip || "",
+    isDefault: addressToEdit?.isDefault || false,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,15 +99,37 @@ const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => v
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log(formData);
+    if (addressToEdit) {
+      const updatedAddress: Address = {
+        ...addressToEdit,
+        ...formData,
+      };
 
-    setIsOverlayOn(false);
+      useUserStore.getState().update_address(updatedAddress);
+      if (updatedAddress.isDefault) {
+        useUserStore.getState().set_default_address(updatedAddress._id);
+      }
+    } else {
+      const newAddress: Address = {
+        _id: Date.now().toString(),
+        lat: 0,
+        lng: 0,
+        ...formData,
+      };
+
+      useUserStore.getState().add_address(newAddress);
+      if (newAddress.isDefault) {
+        useUserStore.getState().set_default_address(newAddress._id);
+      }
+    }
+
+    onClose();
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={() => setIsOverlayOn(false)}
+      onClick={onClose}
     >
       <div
         className="w-full max-w-xl rounded-xl bg-white shadow-xl"
@@ -120,11 +137,13 @@ const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => v
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-xl font-semibold">Add New Address</h2>
+          <h2 className="text-xl font-semibold">
+            {addressToEdit ? "Edit Address" : "Add New Address"}
+          </h2>
 
           <button
             type="button"
-            onClick={() => setIsOverlayOn(false)}
+            onClick={onClose}
             className="rounded-full p-2 hover:bg-gray-100"
           >
             <X size={20} />
@@ -132,10 +151,7 @@ const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => v
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 p-5"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           {/* Label */}
           <div className="flex flex-col gap-1">
             <label htmlFor="label" className="font-medium">
@@ -235,16 +251,14 @@ const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => v
               className="h-4 w-4 accent-app-green"
             />
 
-            <span className="font-medium">
-              Set as default address
-            </span>
+            <span className="font-medium">Set as default address</span>
           </label>
 
           {/* Buttons */}
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setIsOverlayOn(false)}
+              onClick={onClose}
               className="rounded-lg border border-gray-300 px-5 py-2 transition hover:bg-gray-100"
             >
               Cancel
@@ -263,49 +277,69 @@ const AddressForm = ({ setIsOverlayOn }: { setIsOverlayOn: (value: boolean) => v
   );
 };
 
+interface AddressCardProps {
+  address: Address;
+  onEdit: () => void;
+  onDelete: () => void;
+  onSetDefault: () => void;
+}
 
-
-const AddressCard = ({ address }: { address: Address }) => {
-
-
-  const handleEdit = (id: string) => {
-    
-  }
-  const handleDelete = (id: string) => {
-    
-  }
-  
+const AddressCard = ({
+  address,
+  onEdit,
+  onDelete,
+  onSetDefault,
+}: AddressCardProps) => {
   const default_tab = () => {
     return (
-      <div className="bg-app-green text-white p-1 rounded-full flex flex-row gap-1 items-center w-fit text-xs px-3">
-        <Check size={16} className="text-gray-400" /> Default
-      </div>
+      <span className="bg-app-green/10 text-app-green border border-app-green/20 p-1 rounded-full flex flex-row gap-1 items-center w-fit text-xs px-3 font-medium">
+        <Check size={14} className="text-app-green" /> Default
+      </span>
     );
   };
+
   return (
-    <div className="flex flex-col gap-2 bg-white rounded-lg w-[600px] p-4">
-      <div className="flex flex-row gap-2 items-start ">
+    <div className="flex flex-col gap-2 bg-white rounded-lg w-[600px] p-4 border border-gray-100 shadow-sm hover:shadow transition-shadow">
+      <div className="flex flex-row gap-3 items-start ">
         <div>
           <MapPinIcon
-            className=" text-app-green bg-app-cream p-1 rounded-lg"
-            size={30}
+            className="text-app-green bg-app-cream p-1.5 rounded-lg"
+            size={36}
           />
         </div>
         <div className="flex flex-col justify-start">
-          <p className="text-lg font-semibold flex flex-row gap-2 items-center">
-            {address.label} {address.isDefault ? default_tab() : ""}
-          </p>
-          <p className="text-sm text-gray-600">{address.address}</p>
+          <div className="text-lg font-semibold flex flex-row gap-2 items-center">
+            <span>{address.label}</span>
+            {address.isDefault ? (
+              default_tab()
+            ) : (
+              <button
+                onClick={onSetDefault}
+                className="text-[10px] text-gray-500 hover:text-app-green transition-colors border border-gray-200 hover:border-app-green/30 px-2 py-0.5 rounded-full"
+              >
+                Set as Default
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-gray-600 mt-1">{address.address}</p>
           <p className="text-sm text-gray-600">
             {address.city}, {address.state}, {address.zip}
           </p>
         </div>
         <div className="flex flex-row gap-2 items-center ml-auto">
-          <button onClick={() => handleEdit(address._id)} className="bg-app-cream text-app-green p-1 rounded-lg">
-            <Pencil size={20} />
+          <button
+            onClick={onEdit}
+            className="bg-app-cream hover:bg-app-green hover:text-white text-app-green p-2 rounded-lg transition-colors cursor-pointer"
+            title="Edit Address"
+          >
+            <Pencil size={16} />
           </button>
-          <button onClick={() => handleDelete(address._id)} className="bg-app-cream text-app-green p-1 rounded-lg">
-            <Trash2 size={20} />
+          <button
+            onClick={onDelete}
+            className="bg-red-50 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded-lg transition-colors cursor-pointer"
+            title="Delete Address"
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
