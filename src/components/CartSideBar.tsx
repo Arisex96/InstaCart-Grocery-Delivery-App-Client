@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import useCartStore from "../store/useCartStore";
 import { X, ShoppingCart, Trash2 } from "lucide-react";
 import type { CartItem, CartState } from "../types";
+import { useNavigate } from "react-router-dom";
 
 const CartSideBar = () => {
+  const navigate = useNavigate();
   const {
     items,
     total_items,
@@ -104,7 +106,11 @@ const CartSideBar = () => {
                     ${total_price + deliveryFee}
                   </span>
                 </div>
-                <button className="w-full bg-app-orange text-white py-2 rounded-lg hover:bg-app-orange/90 transition-colors">
+                <button className="w-full bg-app-orange text-white py-2 rounded-lg hover:bg-app-orange/90 transition-colors"
+                onClick={()=>{
+                  toggle_cart_view();
+                  navigate("/checkout");
+                }}>
                   Checkout
                 </button>
               </div>
