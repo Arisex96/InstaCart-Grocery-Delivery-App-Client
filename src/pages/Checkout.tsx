@@ -456,7 +456,7 @@ const ReviewOrder = ({
   onPlaceOrder: () => void;
 }) => {
   const cart: CartState = useCartStore();
-  const { items } = cart;
+  const { items,total_price } = cart;
 
   const paymentLabelMap: Record<string, string> = {
     cod: "Cash on Delivery",
@@ -464,6 +464,7 @@ const ReviewOrder = ({
     upi: "UPI / Wallet",
     netbanking: "Net Banking",
   };
+
 
   return (
     <div className="flex flex-col gap-6 p-5 w-full bg-white rounded-xl shadow-sm border border-gray-100 animate-fade-in">
@@ -585,7 +586,12 @@ const ReviewOrder = ({
               : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
           }`}
         >
-          <span>Place Order</span>
+          <span>Place Order ${" "}
+          {(
+            total_price +
+            (total_price > 50 ? 0 : 2) +
+            total_price * 0.18
+          ).toFixed(2)}</span>
           <ChevronRight size={16} />
         </button>
       </div>
