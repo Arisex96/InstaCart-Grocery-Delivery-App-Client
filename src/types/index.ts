@@ -83,8 +83,32 @@ export interface DeliveryPartner {
   phone: string;
   avatar?: string;
   vehicleType?: "bike" | "scooter" | "car";
-  isActive?: boolean;
+  // Non-optional: the server column is now NOT NULL with a default, so a
+  // partner always has an explicit active state.
+  isActive: boolean;
   createdAt?: string;
+}
+
+/**
+ * A shipping address is a *snapshot* taken at order time — it deliberately has
+ * no `_id` and no `isDefault`, because it is not a row in the address book and
+ * editing the saved address must not rewrite past orders.
+ */
+export type ShippingAddress = Omit<Address, "_id" | "isDefault">;
+
+/**
+ * The partner as embedded in an order. This is a *projection*, not a full
+ * `DeliveryPartner`: the server selects only the contact fields it needs
+ * (id/name/phone, plus email or avatar/vehicleType depending on the endpoint),
+ * so an order never carries credentials or an active flag.
+ */
+export interface OrderDeliveryPartner {
+  _id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  avatar?: string;
+  vehicleType?: "bike" | "scooter" | "car";
 }
 
 export interface Order {
@@ -101,7 +125,7 @@ export interface Order {
     lng: number;
     updatedAt: string;
   };
-  shippingAddress: Address;
+  shippingAddress: ShippingAddress;
   paymentMethod: string;
   subtotal: number;
   deliveryFee: number;
@@ -109,7 +133,7 @@ export interface Order {
   total: number;
   status: string;
   statusHistory: { status: string; timestamp: string; note: string }[];
-  deliveryPartner: DeliveryPartner | null;
+  deliveryPartner: OrderDeliveryPartner | null;
   deliveryOtp: string;
   isPaid: boolean;
   createdAt: string;

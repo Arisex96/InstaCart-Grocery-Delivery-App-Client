@@ -152,20 +152,3 @@ const Login = () => {
 };
 
 export default Login;
-const DeliveryAdress = () => {
-  const addresses = useUserStore((state) => state.addresses);
-
-  return (
-    <div className="flex flex-col gap-4 max-w-xl p-4 bg-white rounded-lg">
-      <h1 className="text-sm font-semibold">Delivery Address</h1>
-      <div className="flex flex-row gap-2">
-        {addresses.map((address) => (
-          <div key={address._id} className="flex flex-row gap-2">
-            <input type="radio" name="address" id={address._id} />
-            <label htmlFor={address._id}>{address.address}</label>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};

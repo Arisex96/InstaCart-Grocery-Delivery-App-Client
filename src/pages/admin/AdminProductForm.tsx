@@ -36,7 +36,15 @@ export default function AdminProductForm() {
 
     const handleSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault();
-
+        // TODO(api-wiring): upload the image, then POST/PUT /api/products.
+        // Note the numeric fields are held as strings in this form; the server
+        // now coerces them, so they can be sent as-is.
+        setSaving(true);
+        try {
+            // request goes here
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (

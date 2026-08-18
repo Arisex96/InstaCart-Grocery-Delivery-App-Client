@@ -17,6 +17,10 @@
     "jsx": "react-jsx",
 
     /* Linting */
+    // TypeScript 6 enables `strict` by default, so this is currently a no-op —
+    // it is pinned explicitly so the guarantee survives a TS downgrade or a
+    // future change of defaults.
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
