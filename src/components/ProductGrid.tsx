@@ -41,10 +41,12 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     // 2. Filter by Search Query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
+      // `description` is nullable server-side; guard rather than assume a
+      // string, so a product without one cannot break search.
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query),
+          (p.description ?? "").toLowerCase().includes(query),
       );
     }
 

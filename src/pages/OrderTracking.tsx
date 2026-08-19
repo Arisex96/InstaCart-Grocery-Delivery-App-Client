@@ -4,10 +4,11 @@ import {
   Clock4,
   KeyRound,
   MapPin,
-  MessageCircle,
   PackageCheck,
   Phone,
   Truck,
+  XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Order } from "../types";
@@ -127,14 +128,32 @@ const OrderTracking = () => {
   );
 };
 
-const DeliveryAgent = ({ order }: { order: Order }) => (
+const DeliveryAgent = ({ order }: { order: Order }) => {
+  // Every order is unassigned until a rider is allocated — the auto-assign job
+  // only runs five minutes after checkout — so this was a guaranteed
+  // `TypeError` on the tracking page for exactly the window in which a
+  // customer is most likely to open it.
+  if (!order.deliveryPartner) {
+    return (
+      <section className="rounded-lg bg-white p-6 shadow-sm flex flex-row gap-4 items-center">
+        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+          <Truck className="text-gray-400" size={24} />
+        </div>
+        <div>
+          <p className="text-base font-semibold text-gray-700">
+            Finding a delivery partner
+          </p>
+          <p className="text-sm text-gray-500">
+            We'll assign one shortly and show their details here.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
   <section className="rounded-lg bg-white p-6 shadow-sm flex flex-row gap-4 justify-between items-center">
     <div className="flex flex-row gap-4 items-center">
-      {/* <img
-        src=""
-        alt=""
-        className="w-12 h-12 rounded-full"
-        /> */}
       <div className="w-12 h-12 rounded-full bg-app-green flex items-center justify-center">
         <Truck className="text-white" size={24} />
       </div>
@@ -154,10 +173,11 @@ const DeliveryAgent = ({ order }: { order: Order }) => (
       </button>
     </div>
   </section>
-);
+  );
+};
 
 /**
- * 
+ *
  * ### Delivery Timeline Backend Rule
 
 * `statusHistory` should be the **single source of truth** for the timeline.
@@ -190,7 +210,7 @@ const DeliveryProgress = ({ order }: { order: Order }) => {
     "Delivered",
   ];
 
-  const IconMap = {
+  const IconMap: Record<string, LucideIcon> = {
     Placed: Clock4,
     Assigned: Truck,
     Packed: PackageCheck,
@@ -198,7 +218,19 @@ const DeliveryProgress = ({ order }: { order: Order }) => {
     Delivered: CheckCheck,
   };
 
-  const currentStep = StepList.indexOf(order.status);
+  const isCancelled = order.status === "Cancelled";
+
+  // `indexOf` returns -1 for any status not in StepList — which includes both
+  // "Confirmed" and "Cancelled". That made every step render inactive, so a
+  // cancelled order showed a completely blank timeline instead of a
+  // cancellation. Fall back to the furthest step actually reached in the
+  // history, so the timeline still reflects how far the order got.
+  const stepFromStatus = StepList.indexOf(order.status);
+  const furthestReached = order.statusHistory.reduce((furthest, entry) => {
+    const index = StepList.indexOf(entry.status);
+    return index > furthest ? index : furthest;
+  }, -1);
+  const currentStep = stepFromStatus >= 0 ? stepFromStatus : furthestReached;
 
   const historyMap = new Map(
     order.statusHistory.map((item) => [item.status, item]),
@@ -209,6 +241,22 @@ const DeliveryProgress = ({ order }: { order: Order }) => {
       <h2 className="mb-6 text-lg font-semibold text-app-text">
         Delivery Progress
       </h2>
+
+      {isCancelled && (
+        <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+          <XCircle className="shrink-0 text-red-600" size={20} />
+          <div>
+            <p className="text-sm font-semibold text-red-700">
+              This order was cancelled
+            </p>
+            {historyMap.get("Cancelled")?.note && (
+              <p className="text-xs text-red-600">
+                {historyMap.get("Cancelled")?.note}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col">
         {StepList.map((step, index) => {

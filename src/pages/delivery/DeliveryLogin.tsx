@@ -9,7 +9,15 @@ export default function DeliveryLogin() {
 
     const handleSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault();
-
+        // TODO(api-wiring): POST /api/delivery/login, store the partner token
+        // in its own store (a separate realm from the customer token), then
+        // navigate to /delivery.
+        setLoading(true);
+        try {
+            // request goes here
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

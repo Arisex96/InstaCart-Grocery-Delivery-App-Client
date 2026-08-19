@@ -22,7 +22,15 @@ export default function AdminDeliveryPartners() {
 
     const handleSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault();
-
+        // TODO(api-wiring): POST /api/admin/delivery-partners, then refetch.
+        // The saving flag is driven here so the button's disabled/pending state
+        // is already correct once the request is dropped in.
+        setSaving(true);
+        try {
+            setShowForm(false);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const toggleActive = async (id: string, isActive: boolean) => {
