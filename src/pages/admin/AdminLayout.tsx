@@ -29,11 +29,9 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="h-screen overflow-hidden">
-      <div className="max-lg:hidden">
-        <Navbar />
-      </div>
-      <div className="flex flex-col h-full lg:flex-row gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+    <div className="flex flex-col h-screen overflow-hidden">
+      <Navbar />
+      <div className="flex flex-col flex-1 min-h-0 lg:flex-row gap-8 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
         {/* Admin Sidebar */}
         <aside className="w-full lg:w-64 shrink-0 h-fit bg-white rounded-2xl p-4 border border-app-border">
           <div className="pb-4 mb-4 border-b border-app-border">

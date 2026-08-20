@@ -25,10 +25,19 @@ const Navbar = () => {
   const userStore = useUserStore();
   const clearUser = useUserStore((state) => state.clearUser);
 
+  const deliveryPartnerStr = localStorage.getItem("delivery_partner");
+  let deliveryPartner = null;
+  if (deliveryPartnerStr) {
+    try {
+      deliveryPartner = JSON.parse(deliveryPartnerStr);
+    } catch (e) {}
+  }
+
   const user = {
-    username: userStore.name,
-    email: userStore.email,
+    username: userStore.name || (deliveryPartner ? deliveryPartner.name : ""),
+    email: userStore.email || (deliveryPartner ? deliveryPartner.email : ""),
     isAdmin: userStore.isAdmin,
+    isDelivery: !!deliveryPartner,
   };
 
   const cartCount = useCartStore((state) => state.total_items);
@@ -246,6 +255,18 @@ const Navbar = () => {
                             </span>
                           </Link>
                         )}
+                        {user.isDelivery && (
+                          <Link
+                            to="/delivery"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-650 hover:bg-emerald-50/50 hover:text-app-green transition-colors border-t border-zinc-100/50 mt-1 pt-1.5"
+                          >
+                            <ShieldCheck className="size-4 text-emerald-600 animate-pulse-soft" />
+                            <span className="font-semibold text-emerald-800">
+                              Delivery Dashboard
+                            </span>
+                          </Link>
+                        )}
                       </div>
 
                       {/* Sign Out Section */}
@@ -254,6 +275,8 @@ const Navbar = () => {
                           onClick={() => {
                             setUserMenuOpen(false);
                             localStorage.removeItem("token");
+                            localStorage.removeItem("delivery_token");
+                            localStorage.removeItem("delivery_partner");
                             clearUser();
                             navigate("/");
                           }}
