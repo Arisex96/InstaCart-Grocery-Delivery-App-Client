@@ -1,16 +1,48 @@
-import { useState, useMemo } from "react";
-import { dummyProducts, categoriesData } from "../assets/assets";
+import { useState, useEffect, useMemo } from "react";
+import { categoriesData } from "../assets/assets";
 import ProductGrid from "../components/ProductGrid";
 import { Tag, Sparkles } from "lucide-react";
+import api from "../api/axios";
+import type { Product } from "../types";
 
 const FlashDeals = () => {
-  // 1. Filter products with actual discount > 0
-  const dealProducts = useMemo(() => {
-    return dummyProducts.filter((p) => p.discount > 0);
+  const [dealProducts, setDealProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/products/flash-deals")
+      .then((res) => {
+        if (!cancelled) {
+          const mapped = res.data.products.map((p: any) => ({
+            _id: p.id,
+            name: p.name,
+            description: p.description ?? "",
+            price: p.price,
+            originalPrice: p.originalPrice,
+            image: p.image,
+            category: p.category,
+            unit: p.unit,
+            stock: p.stock,
+            isOrganic: p.isOrganic,
+            rating: p.rating,
+            reviewCount: p.reviewCount,
+            discount: p.discount ?? 0,
+          }));
+          setDealProducts(mapped);
+        }
+      })
+      .catch((err) => console.error("Failed to load flash deals", err))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 2. Dynamic Category filter collection
-  // Only categories that actually contain products with active discounts
   const dealCategories = useMemo(() => {
     const activeSlugs = Array.from(
       new Set(dealProducts.map((p) => p.category)),
@@ -20,6 +52,14 @@ const FlashDeals = () => {
 
   // Selected category state
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-app-green"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 font-sans">

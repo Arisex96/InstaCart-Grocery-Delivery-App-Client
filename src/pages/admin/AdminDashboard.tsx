@@ -7,7 +7,8 @@ import {
   AlertTriangleIcon,
 } from "lucide-react";
 import Loading from "../../components/Loading";
-import { dummyAdminDashboardData, statusColors } from "../../assets/assets";
+import { statusColors } from "../../assets/assets";
+import api from "../../api/axios";
 
 interface Stats {
   totalOrders: number;
@@ -24,10 +25,26 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
-      setStats(dummyAdminDashboardData);
-      setLoading(false);
-    }, 1000);
+    api
+      .get("/admin/stats")
+      .then(({ data }) => {
+        setStats({
+          totalOrders: data.totalOrders,
+          totalUsers: data.totalUsers,
+          totalProducts: data.totalProducts,
+          outOfStock: data.outOfStock,
+          recentOrders: (data.recentOrders || []).map((o: any) => ({
+            _id: o.id,
+            user: o.user,
+            items: o.items || [],
+            total: o.total,
+            status: o.status,
+            createdAt: o.createdAt,
+          })),
+        });
+      })
+      .catch((err) => console.error("Failed to load dashboard", err))
+      .finally(() => setLoading(false));
   }, []);
 
   const cards = stats

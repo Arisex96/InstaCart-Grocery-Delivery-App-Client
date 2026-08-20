@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
 import { ArrowRightIcon, LeafIcon, MailIcon } from "lucide-react";
 import {
   assets,
@@ -6,6 +7,8 @@ import {
   heroSectionData,
   appPromoBannerData,
 } from "../assets/assets";
+import api from "../api/axios";
+import type { Product } from "../types";
 
 import delivery_truck from "../assets/delivery_truck.svg";
 
@@ -15,6 +18,44 @@ import ProductGrid from "../components/ProductGrid";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .get("/products")
+      .then((res) => {
+        if (isMounted) {
+          const mapped = res.data.products.map((p: any) => ({
+            _id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            originalPrice: p.originalPrice,
+            image: p.image,
+            category: p.category,
+            unit: p.unit,
+            stock: p.stock,
+            isOrganic: p.isOrganic,
+            rating: p.rating,
+            reviewCount: p.reviewCount,
+            discount: p.discount,
+          }));
+          setProducts(mapped);
+        }
+      })
+      .catch((err) => console.error(err))
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <>
@@ -140,7 +181,13 @@ const Home = () => {
           </div>
 
           {/* Products grid */}
-          <ProductGrid limit={8} />
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-app-green"></div>
+            </div>
+          ) : (
+            <ProductGrid products={products} limit={8} />
+          )}
         </div>
 
         {/* App download section */}

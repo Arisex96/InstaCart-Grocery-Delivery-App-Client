@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { SlidersHorizontal, X } from "lucide-react";
-import { dummyProducts, categoriesData } from "../assets/assets";
+import { categoriesData } from "../assets/assets";
 import ProductGrid from "../components/ProductGrid";
 import Breadcrumbs from "../components/Breadcrums";
+import api from "../api/axios";
+import type { Product } from "../types";
 
 // ==========================================
 // Sub-Components Definitions (Same Page)
@@ -393,37 +395,62 @@ const Products = () => {
     return isNaN(val) ? null : val;
   }, [maxPriceInput]);
 
-  // Compute final filtered products count for the header
-  const filteredCount = useMemo(() => {
-    let list = [...dummyProducts];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [fetching, setFetching] = useState(true);
 
-    // Category filter
-    if (activeCategory && activeCategory !== "all") {
-      list = list.filter(
-        (p) => p.category.toLowerCase() === activeCategory.toLowerCase(),
-      );
-    }
+  useEffect(() => {
+    let isMounted = true;
+    setFetching(true);
+    const fetchProducts = async () => {
+      try {
+        const mappedSort =
+          sortBy === "price-low-to-high"
+            ? "price-low"
+            : sortBy === "price-high-to-low"
+              ? "price-high"
+              : "default";
+        const response = await api.get("/products", {
+          params: {
+            category: activeCategory,
+            search: searchQuery,
+            minPrice: minPriceInput,
+            maxPrice: maxPriceInput,
+            sort: mappedSort,
+          },
+        });
+        if (isMounted) {
+          const mapped = response.data.products.map((p: any) => ({
+            _id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            originalPrice: p.originalPrice,
+            image: p.image,
+            category: p.category,
+            unit: p.unit,
+            stock: p.stock,
+            isOrganic: p.isOrganic,
+            rating: p.rating,
+            reviewCount: p.reviewCount,
+            discount: p.discount,
+          }));
+          setProducts(mapped);
+        }
+      } catch (error) {
+        console.error("Failed to load products", error);
+      } finally {
+        if (isMounted) {
+          setFetching(false);
+        }
+      }
+    };
+    fetchProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeCategory, searchQuery, minPriceInput, maxPriceInput, sortBy]);
 
-    // Search query filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q),
-      );
-    }
-
-    // Price filters
-    if (minPrice !== null) {
-      list = list.filter((p) => p.price >= minPrice);
-    }
-    if (maxPrice !== null) {
-      list = list.filter((p) => p.price <= maxPrice);
-    }
-
-    return list.length;
-  }, [activeCategory, searchQuery, minPrice, maxPrice]);
+  const filteredCount = products.length;
 
   const handleCategoryChange = (slug: string) => {
     const params = new URLSearchParams(searchParams);
@@ -512,16 +539,22 @@ const Products = () => {
 
         {/* Right Side: Reusable Product Grid */}
         <main className="flex-1">
-          <ProductGrid
-            products={dummyProducts}
-            category={activeCategory}
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            sortBy={sortBy}
-            searchQuery={searchQuery}
-            onResetFilters={handleResetFilters}
-            scrollable={true}
-          />
+          {fetching ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-app-green"></div>
+            </div>
+          ) : (
+            <ProductGrid
+              products={products}
+              category={activeCategory}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              sortBy={sortBy}
+              searchQuery={searchQuery}
+              onResetFilters={handleResetFilters}
+              scrollable={true}
+            />
+          )}
         </main>
       </div>
     </div>

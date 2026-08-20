@@ -7,6 +7,12 @@ import {
   LockIcon,
   Loader2Icon,
 } from "lucide-react";
+
+import api from "../api/axios";
+import { useNavigate } from "react-router";
+import useUserStore from "../store/useUserStore";
+import toast from "react-hot-toast";
+
 const Login = () => {
   const [showSignin, setShowSignin] = useState(true);
   const [name, setName] = useState("");
@@ -15,20 +21,112 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
 
-  const handleSignin = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const setUser = useUserStore((state) => state.setUser);
+
+  const navigate = useNavigate();
+
+  const handleSignin = async () => {
+    try {
+      setLoading(true);
+
+      const response = await api.post("/auth/login", {
+        email,
+        password,
+      });
+
+      console.log(response.data);
+
+      const backendUser = response.data.user;
+      localStorage.setItem("token", response.data.token);
+
+      let addressesList = [];
+      try {
+        const addrRes = await api.get("/addresses");
+        addressesList = addrRes.data.map((addr: any) => ({
+          _id: addr.id,
+          label: addr.label,
+          address: addr.address,
+          city: addr.city,
+          state: addr.state,
+          zip: addr.zip,
+          isDefault: addr.isDefault,
+          lat: addr.lat,
+          lng: addr.lng,
+        }));
+      } catch (err) {
+        console.warn("Could not fetch addresses on login", err);
+      }
+
+      const user = {
+        _id: backendUser.id,
+        name: backendUser.name,
+        email: backendUser.email,
+        phone: backendUser.phone ?? "",
+        avatar: backendUser.avatar ?? "",
+        addresses: addressesList,
+        isAdmin: backendUser.isAdmin,
+        createdAt: backendUser.createdAt,
+        updatedAt: backendUser.updatedAt,
+      };
+
+      setUser(user);
+      toast.success("Logged in successfully!");
+
+      if (user.isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    } catch (error: any) {
+      console.log(error);
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
-  const handleSignup = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-  };
+  const handleSignup = async () => {
+    try {
+      setLoading(true);
 
+      const response = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
+
+      console.log(response.data);
+
+      const backendUser = response.data.user;
+      localStorage.setItem("token", response.data.token);
+
+      const user = {
+        _id: backendUser.id,
+        name: backendUser.name,
+        email: backendUser.email,
+        phone: backendUser.phone ?? "",
+        avatar: backendUser.avatar ?? "",
+        addresses: [],
+        isAdmin: backendUser.isAdmin,
+        createdAt: backendUser.createdAt,
+        updatedAt: backendUser.updatedAt,
+      };
+
+      setUser(user);
+      toast.success("Account created successfully!");
+
+      if (user.isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    } catch (error: any) {
+      console.log(error);
+      toast.error(error.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen flex">
       {/* Left Side */}

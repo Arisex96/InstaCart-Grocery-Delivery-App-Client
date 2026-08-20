@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import type { Product } from "../types";
-import { dummyProducts } from "../assets/assets";
 import ProductCard from "./ProductCard";
 import { Inbox } from "lucide-react";
 
@@ -17,7 +16,7 @@ export interface ProductGridProps {
 }
 
 const ProductGrid: React.FC<ProductGridProps> = ({
-  products = dummyProducts,
+  products = [],
   category = null,
   minPrice = null,
   maxPrice = null,

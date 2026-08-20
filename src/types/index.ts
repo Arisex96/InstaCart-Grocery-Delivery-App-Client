@@ -10,6 +10,22 @@ export interface User {
   updatedAt: string;
 }
 
+export interface UserState extends User {
+  setUser: (user: User) => void;
+
+  clearUser: () => void;
+
+  add_address: (address: Address) => void;
+
+  remove_address: (address_id: string) => void;
+
+  update_address: (address: Address) => void;
+
+  set_default_address: (address_id: string) => void;
+
+  loadAddresses: () => Promise<void>;
+}
+
 export interface Address {
   _id: string;
   label: string;
@@ -20,13 +36,6 @@ export interface Address {
   isDefault: boolean;
   lat: number;
   lng: number;
-}
-
-export interface UserState extends User {
-  add_address: (address: Address) => void;
-  remove_address: (address_id: string) => void;
-  update_address: (address: Address) => void;
-  set_default_address: (address_id: string) => void;
 }
 
 export interface Category {
@@ -49,7 +58,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   discount: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface Review {
@@ -113,14 +122,14 @@ export interface OrderDeliveryPartner {
 
 export interface Order {
   _id: string;
-  user: {
+  user?: {
     _id: string;
     name: string;
     email: string;
     phone?: string;
   };
   items: OrderItem[];
-  liveLocation: {
+  liveLocation?: {
     lat: number;
     lng: number;
     updatedAt: string;

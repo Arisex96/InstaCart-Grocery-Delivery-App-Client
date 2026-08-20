@@ -1,11 +1,13 @@
 import Breadcrumbs from "../components/Breadcrums";
 import { useParams } from "react-router";
-import { dummyProducts, dummyReviews } from "../assets/assets";
+import { dummyReviews } from "../assets/assets";
 import { ArrowLeft, CheckIcon, Leaf, Star, XIcon } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useCartStore from "../store/useCartStore";
 import ProductGrid from "../components/ProductGrid";
+import api from "../api/axios";
+import type { Product } from "../types";
 
 const HalfStar = ({ size = 16 }: { size?: number }) => (
   <div
@@ -34,7 +36,68 @@ const ProductPage = () => {
   const [quantity, setQuantity] = useState(1);
   const addToCart = useCartStore((state) => state.add_item);
 
-  const product = dummyProducts.find((p) => p._id === productId);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data } = await api.get(`/products/${productId}`);
+        const p = data.product;
+        const mapped: Product = {
+          _id: p.id,
+          name: p.name,
+          description: p.description ?? "",
+          price: p.price,
+          originalPrice: p.originalPrice,
+          image: p.image,
+          category: p.category,
+          unit: p.unit,
+          stock: p.stock,
+          isOrganic: p.isOrganic,
+          rating: p.rating,
+          reviewCount: p.reviewCount,
+          discount: p.discount ?? 0,
+        };
+        if (!cancelled) setProduct(mapped);
+
+        const simRes = await api.get("/products", {
+          params: { category: p.category },
+        });
+        if (!cancelled) {
+          setSimilarProducts(
+            simRes.data.products
+              .filter((sp: any) => sp.id !== p.id)
+              .map((sp: any) => ({
+                _id: sp.id,
+                name: sp.name,
+                description: sp.description ?? "",
+                price: sp.price,
+                originalPrice: sp.originalPrice,
+                image: sp.image,
+                category: sp.category,
+                unit: sp.unit,
+                stock: sp.stock,
+                isOrganic: sp.isOrganic,
+                rating: sp.rating,
+                reviewCount: sp.reviewCount,
+                discount: sp.discount ?? 0,
+              })),
+          );
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const reviews = useMemo(() => {
     if (!product) return [];
@@ -68,12 +131,15 @@ const ProductPage = () => {
       "Exceeded my expectations. The taste and freshness were top-notch. Five stars!",
     ];
 
-    const count = Math.min(product.reviewCount, 3);
+    const count = Math.min(product.reviewCount ?? 0, 3);
     const list = [];
     for (let i = 0; i < count; i++) {
       const rating = Math.max(
         3,
-        Math.min(5, Math.round(product.rating + (i % 2 === 0 ? 0.5 : -0.5))),
+        Math.min(
+          5,
+          Math.round((product.rating ?? 5) + (i % 2 === 0 ? 0.5 : -0.5)),
+        ),
       );
       list.push({
         _id: `generated-${product._id}-${i}`,
@@ -88,8 +154,16 @@ const ProductPage = () => {
     return list;
   }, [product]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-app-green"></div>
+      </div>
+    );
+  }
+
   if (!product) {
-    return <div>Product not found</div>;
+    return <div className="text-center py-20 text-lg">Product not found</div>;
   }
 
   return (
@@ -158,7 +232,9 @@ const ProductPage = () => {
               {product.stock ? (
                 <>
                   <CheckIcon className="size-4  text-green-600" />
-                  <span  className="text-green-600">In Stock ({product.stock})</span>
+                  <span className="text-green-600">
+                    In Stock ({product.stock})
+                  </span>
                 </>
               ) : (
                 <>
@@ -167,50 +243,49 @@ const ProductPage = () => {
                 </>
               )}
             </p>{" "}
-
             {/* Quantity and Add to Cart */}
-            {product.stock>0?(
+            {product.stock > 0 ? (
               <div className="flex items-center gap-2 mb-4">
-              <div className="flex gap-2">
-                <button
-                  className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg"
-                  onClick={() => {
-                    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
-                  }}
-                >
-                  -
-                </button>
-                <div className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg font-semibold w-[50px] text-center">
-                  {quantity}
+                <div className="flex gap-2">
+                  <button
+                    className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg"
+                    onClick={() => {
+                      setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+                    }}
+                  >
+                    -
+                  </button>
+                  <div className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg font-semibold w-[50px] text-center">
+                    {quantity}
+                  </div>
+                  <button
+                    className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg"
+                    onClick={() => {
+                      setQuantity((prev) =>
+                        prev === product.stock ? prev : prev + 1,
+                      );
+                    }}
+                  >
+                    +
+                  </button>
                 </div>
                 <button
-                  className=" text-gray-600 border border-gray-300 px-4 py-2 rounded-lg"
+                  className="bg-app-orange text-white px-4 py-2 rounded-lg"
                   onClick={() => {
-                    setQuantity((prev) =>
-                      prev === product.stock ? prev : prev + 1,
-                    );
+                    addToCart(product, quantity);
                   }}
                 >
-                  +
+                  Add to Cart
                 </button>
               </div>
-              <button className="bg-app-orange text-white px-4 py-2 rounded-lg"
-              onClick={() => {
-                addToCart(product, quantity);
-              }}>
-                Add to Cart
-              </button>
-            </div>
-            ):(
+            ) : (
               <div className="flex items-center gap-2 mb-4">
-              <button className="bg-app-orange text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                Out of Stock
-              </button>
-            </div>
+                <button className="bg-app-orange text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                  Out of Stock
+                </button>
+              </div>
             )}
-            </div>
-            
-
+          </div>
         </div>
         {/** =Customer review */}
         <div className="flex flex-col gap-6 mt-10">
@@ -275,8 +350,10 @@ const ProductPage = () => {
         </div>
         {/**View similar category products */}
         <div className="flex flex-col gap-4 mt-10">
-          <h2 className="text-2xl text-black font-semibold">Similar Products</h2>
-          <ProductGrid products={dummyProducts} category={product.category} />
+          <h2 className="text-2xl text-black font-semibold">
+            Similar Products
+          </h2>
+          <ProductGrid products={similarProducts} category={product.category} />
         </div>
       </div>
     </>

@@ -19,13 +19,17 @@ import {
 import useCartStore from "../store/useCartStore";
 import { useNavigate, useSearchParams } from "react-router";
 import useDebounce from "../hooks/useDebounce";
+import useUserStore from "../store/useUserStore";
 
 const Navbar = () => {
-  const [user, setUser] = useState({
-    username: "Aditya",
-    email: "123@gmail.com",
-    isAdmin: true,
-  });
+  const userStore = useUserStore();
+  const clearUser = useUserStore((state) => state.clearUser);
+
+  const user = {
+    username: userStore.name,
+    email: userStore.email,
+    isAdmin: userStore.isAdmin,
+  };
 
   const cartCount = useCartStore((state) => state.total_items);
   const toggleCart = useCartStore((state) => state.toggle_cart_view);
@@ -207,7 +211,7 @@ const Navbar = () => {
                           <span className="font-medium">My Orders</span>
                         </Link>
                         <Link
-                          to="/"
+                          to="/addresses"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
                         >
@@ -215,7 +219,7 @@ const Navbar = () => {
                           <span className="font-medium">Saved Addresses</span>
                         </Link>
                         <Link
-                          to="/"
+                          to="/products"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
                         >
@@ -223,7 +227,7 @@ const Navbar = () => {
                           <span className="font-medium">Manage Products</span>
                         </Link>
                         <Link
-                          to="/"
+                          to="/deals"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
                         >
@@ -232,7 +236,7 @@ const Navbar = () => {
                         </Link>
                         {user.isAdmin && (
                           <Link
-                            to="/"
+                            to="/admin"
                             onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-650 hover:bg-emerald-50/50 hover:text-app-green transition-colors border-t border-zinc-100/50 mt-1 pt-1.5"
                           >
@@ -249,11 +253,9 @@ const Navbar = () => {
                         <button
                           onClick={() => {
                             setUserMenuOpen(false);
-                            setUser({
-                              username: "",
-                              email: "",
-                              isAdmin: false,
-                            });
+                            localStorage.removeItem("token");
+                            clearUser();
+                            navigate("/");
                           }}
                           className="flex w-full items-center gap-3 px-3 py-2 rounded-xl text-sm text-red-650 hover:bg-red-50 text-red-650 transition-colors"
                         >
@@ -267,7 +269,7 @@ const Navbar = () => {
                       {/* Guest menu options */}
                       <div className="p-1 flex flex-col gap-0.5">
                         <Link
-                          to="/"
+                          to="/login"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-app-green transition-colors mt-0.5"
                         >
@@ -275,7 +277,7 @@ const Navbar = () => {
                           <span>Sign In</span>
                         </Link>
                         <Link
-                          to="/"
+                          to="/products"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-app-green transition-colors"
                         >
@@ -283,7 +285,7 @@ const Navbar = () => {
                           <span>Products</span>
                         </Link>
                         <Link
-                          to="/"
+                          to="/deals"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-app-green transition-colors"
                         >

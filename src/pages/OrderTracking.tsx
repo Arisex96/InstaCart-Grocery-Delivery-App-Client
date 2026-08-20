@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Order } from "../types";
-import { dummyDashboardOrdersData } from "../assets/assets";
 import { useParams } from "react-router";
+import api from "../api/axios";
 import {
   MapContainer,
   TileLayer,
@@ -27,8 +27,7 @@ import home from "../assets/home.png";
 import motorbike from "../assets/motorbike.png";
 import L from "leaflet";
 
-import { useNavigate } from "react-router-dom";   
-
+import { useNavigate } from "react-router-dom";
 
 const OrderTracking = () => {
   // - /order/:id
@@ -39,13 +38,56 @@ const OrderTracking = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchOrder = () => {
-      const response = dummyDashboardOrdersData.find(
-        (it) => it._id === orderId,
-      );
-      setOrder(response || null);
+    let cancelled = false;
+    api
+      .get(`/orders/${orderId}`)
+      .then((res) => {
+        if (!cancelled && res.data) {
+          const o = res.data;
+          const mapped: Order = {
+            _id: o.id,
+            user: o.userId ? { _id: o.userId, name: "", email: "" } : undefined,
+            items: (o.items || []).map((it: any) => ({
+              product: it.product,
+              name: it.name,
+              image:
+                it.image ||
+                "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200",
+              price: it.price,
+              quantity: it.quantity,
+              unit: it.unit || "pcs",
+            })),
+            shippingAddress: o.shippingAddress,
+            paymentMethod: o.paymentmethod,
+            subtotal: o.subtotal,
+            deliveryFee: o.deliveryFee,
+            tax: o.tax,
+            total: o.total,
+            status: o.status,
+            statusHistory: o.statusHistory || [],
+            deliveryPartner: o.deliveryPartner
+              ? {
+                  _id: o.deliveryPartner.id,
+                  name: o.deliveryPartner.name,
+                  phone: o.deliveryPartner.phone,
+                  avatar: o.deliveryPartner.avatar,
+                  vehicleType: o.deliveryPartner.vehicleType,
+                }
+              : null,
+            deliveryOtp: o.deliveryOtp || "",
+            isPaid: o.isPaid || false,
+            createdAt: o.createdAt,
+            liveLocation: o.liveLocation || undefined,
+          };
+          setOrder(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch order", err);
+      });
+    return () => {
+      cancelled = true;
     };
-    fetchOrder();
   }, [orderId]);
 
   const date_formatter = (date: string) => {
@@ -152,27 +194,27 @@ const DeliveryAgent = ({ order }: { order: Order }) => {
   }
 
   return (
-  <section className="rounded-lg bg-white p-6 shadow-sm flex flex-row gap-4 justify-between items-center">
-    <div className="flex flex-row gap-4 items-center">
-      <div className="w-12 h-12 rounded-full bg-app-green flex items-center justify-center">
-        <Truck className="text-white" size={24} />
+    <section className="rounded-lg bg-white p-6 shadow-sm flex flex-row gap-4 justify-between items-center">
+      <div className="flex flex-row gap-4 items-center">
+        <div className="w-12 h-12 rounded-full bg-app-green flex items-center justify-center">
+          <Truck className="text-white" size={24} />
+        </div>
+
+        <div>
+          <p className="text-lg font-semibold">{order.deliveryPartner.name}</p>
+          <p className="text-sm text-gray-600">{order.deliveryPartner.phone}</p>
+        </div>
       </div>
 
-      <div>
-        <p className="text-lg font-semibold">{order.deliveryPartner.name}</p>
-        <p className="text-sm text-gray-600">{order.deliveryPartner.phone}</p>
+      <div className="flex flex-row gap-6">
+        <button className="flex items-center gap-2">
+          <Phone
+            className="text-gray-500 bg-app-cream rounded-lg h-12.5 w-12.5 flex items-center justify-center p-3 hover:shadow-md"
+            size={20}
+          />
+        </button>
       </div>
-    </div>
-
-    <div className="flex flex-row gap-6">
-      <button className="flex items-center gap-2">
-        <Phone
-          className="text-gray-500 bg-app-cream rounded-lg h-[50px] w-[50px] flex items-center justify-center p-3 hover:shadow-md"
-          size={20}
-        />
-      </button>
-    </div>
-  </section>
+    </section>
   );
 };
 
@@ -285,7 +327,7 @@ const DeliveryProgress = ({ order }: { order: Order }) => {
 
                 {index !== StepList.length - 1 && (
                   <div
-                    className={`h-16 w-[2px]
+                    className={`h-16 w-0.5
                       ${index < currentStep ? "bg-app-green" : "bg-gray-200"}`}
                   />
                 )}
@@ -325,6 +367,12 @@ const DeliveryProgress = ({ order }: { order: Order }) => {
 };
 
 const DeliveryOtpBox = ({ order }: { order: Order }) => {
+  const showOtp =
+    order.deliveryOtp &&
+    ["Assigned", "Packed", "Out for Delivery"].includes(order.status);
+
+  if (!showOtp) return null;
+
   // string to array of strings (e.g. "123456" -> ["1", "2", "3", "4", "5", "6"])
   const otp_formatter = order.deliveryOtp ? order.deliveryOtp.split("") : [];
 
@@ -444,19 +492,31 @@ const ItemsBox = ({ order }: { order: Order }) => {
 };
 
 const DeliveryMap = ({ order }: { order: Order }) => {
+  const customerLat = parseFloat(order.shippingAddress.lat as any);
+  const customerLng = parseFloat(order.shippingAddress.lng as any);
   const customer: [number, number] = [
-    order.shippingAddress.lat,
-    order.shippingAddress.lng,
+    isNaN(customerLat) || customerLat === 0 ? 12.9716 : customerLat, // default fallback to a valid coordinate if 0 or NaN
+    isNaN(customerLng) || customerLng === 0 ? 77.5946 : customerLng,
   ];
 
-  const rider: [number, number] = [
-    order.liveLocation.lat,
-    order.liveLocation.lng,
-  ];
+  const hasRiderLocation = !!(
+    order.liveLocation &&
+    typeof order.liveLocation?.lat === "number" &&
+    !isNaN(order.liveLocation.lat) &&
+    order.liveLocation.lat !== 0 &&
+    typeof order.liveLocation?.lng === "number" &&
+    !isNaN(order.liveLocation.lng) &&
+    order.liveLocation.lng !== 0
+  );
+
+  const rider: [number, number] =
+    hasRiderLocation && order.liveLocation
+      ? [order.liveLocation.lat, order.liveLocation.lng]
+      : customer;
 
   const riderIcon = L.divIcon({
-  className: "",
-  html: `
+    className: "",
+    html: `
     <div style="
       width:50px;
       height:50px;
@@ -471,13 +531,13 @@ const DeliveryMap = ({ order }: { order: Order }) => {
       <img src="${motorbike}" style="width:28px;height:28px;" />
     </div>
   `,
-  iconSize: [50, 50],
-  iconAnchor: [25, 25],
-});
+    iconSize: [50, 50],
+    iconAnchor: [25, 25],
+  });
 
- const homeIcon = L.divIcon({
-  className: "",
-  html: `
+  const homeIcon = L.divIcon({
+    className: "",
+    html: `
     <div style="
       width:50px;
       height:50px;
@@ -492,17 +552,17 @@ const DeliveryMap = ({ order }: { order: Order }) => {
       <img src="${home}" style="width:28px;height:28px;" />
     </div>
   `,
-  iconSize: [50, 50],
-  iconAnchor: [25, 25],
-});
+    iconSize: [50, 50],
+    iconAnchor: [25, 25],
+  });
 
   return (
     <section className="overflow-hidden rounded-xl bg-white shadow z-0">
       <MapContainer
         center={customer}
-        zoom={14}
+        zoom={hasRiderLocation ? 14 : 15}
         scrollWheelZoom={true}
-        className="h-[350px] w-full"
+        className="h-87.5 w-full"
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -520,20 +580,26 @@ const DeliveryMap = ({ order }: { order: Order }) => {
         </Marker>
 
         {/* Delivery Partner */}
-        <Marker position={rider} icon={riderIcon}>
-          <Popup>
-            <div>
-              <p className="font-semibold">Delivery Partner</p>
-              <p>
-                Updated:{" "}
-                {new Date(order.liveLocation.updatedAt).toLocaleTimeString()}
-              </p>
-            </div>
-          </Popup>
-        </Marker>
+        {hasRiderLocation && order.liveLocation && (
+          <Marker position={rider} icon={riderIcon}>
+            <Popup>
+              <div>
+                <p className="font-semibold">Delivery Partner</p>
+                <p>
+                  Updated:{" "}
+                  {order.liveLocation.updatedAt
+                    ? new Date(
+                        order.liveLocation.updatedAt,
+                      ).toLocaleTimeString()
+                    : "Just now"}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* Line between them */}
-        <Polyline positions={[rider, customer]} />
+        {hasRiderLocation && <Polyline positions={[rider, customer]} />}
       </MapContainer>
     </section>
   );

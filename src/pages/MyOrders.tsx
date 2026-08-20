@@ -1,25 +1,59 @@
 import type { Order } from "../types";
 import { useState, useEffect } from "react";
-
-import { dummyDashboardOrdersData } from "../assets/assets";
-import {  ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
-
-import { useNavigate } from "react-router-dom";   
+import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 const MyOrders = (): any => {
   const [orders, setOrders] = useState<Order[]>([]);
-
-  const temp_user = {
-    _id: "69bb6caf448f2d818db59122",
-    name: "Admin",
-    email: "admin@example.com",
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = dummyDashboardOrdersData.filter(
-      (it) => it.user._id === temp_user._id,
-    );
-    setOrders(fetchOrders);
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get("/orders")
+      .then((res) => {
+        if (!cancelled) {
+          const mapped = res.data.map((order: any) => ({
+            _id: order.id,
+            user: order.userId,
+            items: (order.items || []).map((it: any) => ({
+              product: it.product,
+              name: it.name,
+              image:
+                it.image ||
+                "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200",
+              price: it.price,
+              quantity: it.quantity,
+              unit: it.unit || "pcs",
+            })),
+            shippingAddress: order.shippingAddress,
+            paymentMethod: order.paymentmethod,
+            subtotal: order.subtotal,
+            deliveryFee: order.deliveryFee,
+            tax: order.tax,
+            total: order.total,
+            status: order.status,
+            statusHistory: order.statusHistory || [],
+            deliveryPartner: order.deliveryPartner,
+            deliveryOtp: order.deliveryOtp,
+            isPaid: order.isPaid,
+            createdAt: order.createdAt,
+          }));
+          setOrders(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load orders", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [selectedTab, setSelectedTab] = useState<string>("All Orders");
@@ -46,24 +80,30 @@ const MyOrders = (): any => {
       </section>
 
       <section className="flex flex-col gap-6 overflow-y-auto">
-        {(() => {
-          const filteredOrders = orders.filter((it) => {
-            if (selectedTab === "All Orders") return true;
-            return it.status === selectedTab;
-          });
-
-          if (filteredOrders.length === 0) {
-            return (
-              <p className="text-center text-gray-500 text-2xl bg-white p-4 rounded-lg max-w-5xl">
-                No orders found
-              </p>
-            );
-          } else {
-            return filteredOrders.map((order, index) => {
-              return <OrderCard key={index} order={order} />;
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-app-green animate-delay-100"></div>
+          </div>
+        ) : (
+          (() => {
+            const filteredOrders = orders.filter((it) => {
+              if (selectedTab === "All Orders") return true;
+              return it.status === selectedTab;
             });
-          }
-        })()}
+
+            if (filteredOrders.length === 0) {
+              return (
+                <p className="text-center text-gray-500 text-2xl bg-white p-4 rounded-lg max-w-5xl">
+                  No orders found
+                </p>
+              );
+            } else {
+              return filteredOrders.map((order, index) => {
+                return <OrderCard key={index} order={order} />;
+              });
+            }
+          })()
+        )}
       </section>
     </main>
   );
@@ -74,7 +114,6 @@ const OrderCard = ({ order }: { order: Order }) => {
 
   const [showOrderTableId, setShowOrderTableId] = useState<string | null>(null);
   const navigator = useNavigate();
-
 
   const status_tab = (status: string) => {
     const bg_color =
@@ -119,9 +158,7 @@ const OrderCard = ({ order }: { order: Order }) => {
             <p className="text-lg">Order ID: {order._id}</p>
 
             {/**Clicking opens table */}
-            <div
-              className="flex items-center gap-2"
-            >
+            <div className="flex items-center gap-2">
               {status_tab(order.status)}
             </div>
           </div>
@@ -135,7 +172,7 @@ const OrderCard = ({ order }: { order: Order }) => {
           return (
             <div
               key={index}
-              className="h-[70px] w-[70px] flex justify-center items-center bg-white rounded-lg relative"
+              className="h-17.5 w-17.5 flex justify-center items-center bg-white rounded-lg relative"
             >
               <img
                 src={item.image}
@@ -153,15 +190,28 @@ const OrderCard = ({ order }: { order: Order }) => {
 
       <section className="flex flex-row justify-between items-center">
         <p className="text-md text-gray-400 flex items-center gap-2">
-          Total Items: {order.items.length} 
+          Total Items: {order.items.length}
           <span
-          onClick={() => {
-            if (showOrderTableId === order._id) {
-              setShowOrderTableId(null);
-            } else {
-              setShowOrderTableId(order._id);
-            }
-          }}>{showOrderTableId === order._id ? <ArrowUp size={30} className="text-app-green-light border border-gray-200 rounded-full p-1 hover:bg-app-green-light hover:text-white transition-colors cursor-pointer" /> : <ArrowDown size={30} className="text-app-green-light border border-gray-200 rounded-full p-1 hover:bg-app-green-light hover:text-white transition-colors cursor-pointer" />}</span>
+            onClick={() => {
+              if (showOrderTableId === order._id) {
+                setShowOrderTableId(null);
+              } else {
+                setShowOrderTableId(order._id);
+              }
+            }}
+          >
+            {showOrderTableId === order._id ? (
+              <ArrowUp
+                size={30}
+                className="text-app-green-light border border-gray-200 rounded-full p-1 hover:bg-app-green-light hover:text-white transition-colors cursor-pointer"
+              />
+            ) : (
+              <ArrowDown
+                size={30}
+                className="text-app-green-light border border-gray-200 rounded-full p-1 hover:bg-app-green-light hover:text-white transition-colors cursor-pointer"
+              />
+            )}
+          </span>
         </p>
         <p className="text-lg font-semibold">Total Price: {order.total}</p>
       </section>

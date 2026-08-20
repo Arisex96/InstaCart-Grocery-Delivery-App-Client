@@ -18,18 +18,20 @@ import type { Address, CartState } from "../types";
 import useUserStore from "../store/useUserStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import api from "../api/axios";
 
 const Checkout = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const userStore = useUserStore();
   const navigate = useNavigate();
-  const { clear_cart } = useCartStore();
+  const { clear_cart, items } = useCartStore();
 
   const [currentAddress, setCurrentAddress] = useState<Address | null>(
     userStore.addresses.find((address) => address.isDefault) || null,
   );
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Sync currentAddress if the default address changes or addresses are loaded
   useEffect(() => {
@@ -59,10 +61,56 @@ const Checkout = () => {
     },
   ];
 
-  const handlePlaceOrder = () => {
-    toast.success("Order placed successfully! Thank you.");
-    clear_cart();
-    navigate("/my-orders");
+  const handlePlaceOrder = async () => {
+    if (submitting) return;
+
+    if (!currentAddress) {
+      toast.error("Please select a delivery address.");
+      return;
+    }
+    if (!selectedPayment) {
+      toast.error("Please select a payment method.");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Your cart is empty.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const orderItems = items.map((it) => ({
+        product: it.product._id,
+        quantity: it.quantity,
+      }));
+
+      const shippingAddress = {
+        label: currentAddress.label,
+        address: currentAddress.address,
+        city: currentAddress.city,
+        state: currentAddress.state,
+        zip: currentAddress.zip,
+        lat: currentAddress.lat,
+        lng: currentAddress.lng,
+      };
+
+      await api.post("/orders", {
+        items: orderItems,
+        shippingAddress,
+        PaymentMethod: selectedPayment,
+      });
+
+      toast.success("Order placed successfully! Thank you.");
+      clear_cart();
+      navigate("/my-orders");
+    } catch (err: any) {
+      const errMsg =
+        err.response?.data?.message ||
+        "Failed to place order. Please try again.";
+      toast.error(errMsg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -138,6 +186,7 @@ const Checkout = () => {
               selectedPayment={selectedPayment}
               onBack={() => setCurrentStep(2)}
               onPlaceOrder={handlePlaceOrder}
+              isPlacing={submitting}
             />
           )}
         </div>
@@ -449,14 +498,16 @@ const ReviewOrder = ({
   selectedPayment,
   onBack,
   onPlaceOrder,
+  isPlacing,
 }: {
   currentAddress: Address | null;
   selectedPayment: string | null;
   onBack: () => void;
   onPlaceOrder: () => void;
+  isPlacing?: boolean;
 }) => {
   const cart: CartState = useCartStore();
-  const { items,total_price } = cart;
+  const { items, total_price } = cart;
 
   const paymentLabelMap: Record<string, string> = {
     cod: "Cash on Delivery",
@@ -464,7 +515,6 @@ const ReviewOrder = ({
     upi: "UPI / Wallet",
     netbanking: "Net Banking",
   };
-
 
   return (
     <div className="flex flex-col gap-6 p-5 w-full bg-white rounded-xl shadow-sm border border-gray-100 animate-fade-in">
@@ -578,21 +628,34 @@ const ReviewOrder = ({
           Back to Payment
         </button>
         <button
-          disabled={!currentAddress || !selectedPayment || items.length === 0}
+          disabled={
+            !currentAddress ||
+            !selectedPayment ||
+            items.length === 0 ||
+            isPlacing
+          }
           onClick={onPlaceOrder}
           className={`text-sm font-semibold py-2.5 px-6 rounded-xl transition-all shadow-md flex items-center gap-1.5 border border-transparent ${
-            currentAddress && selectedPayment && items.length > 0
+            currentAddress && selectedPayment && items.length > 0 && !isPlacing
               ? "bg-app-orange hover:bg-app-orange-dark text-white cursor-pointer"
               : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
           }`}
         >
-          <span>Place Order ${" "}
-          {(
-            total_price +
-            (total_price > 50 ? 0 : 2) +
-            total_price * 0.18
-          ).toFixed(2)}</span>
-          <ChevronRight size={16} />
+          {isPlacing ? (
+            <span>Placing Order...</span>
+          ) : (
+            <>
+              <span>
+                Place Order ${" "}
+                {(
+                  total_price +
+                  (total_price > 50 ? 0 : 2) +
+                  total_price * 0.18
+                ).toFixed(2)}
+              </span>
+              <ChevronRight size={16} />
+            </>
+          )}
         </button>
       </div>
     </div>

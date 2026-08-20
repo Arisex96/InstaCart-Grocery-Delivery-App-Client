@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Navigate } from "react-router-dom";
 import {
   PlusIcon,
   PackageSearchIcon,
@@ -9,8 +9,16 @@ import {
   Truck,
 } from "lucide-react";
 import Navbar from "../../components/Navbar";
+import useUserStore from "../../store/useUserStore";
 
 export default function AdminLayout() {
+  const { isAdmin } = useUserStore();
+  const token = localStorage.getItem("token");
+
+  if (!token || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   const AdminLinkData = [
     { to: "/admin", label: "Dashboard", icon: BarChart3Icon },
     { to: "/admin/products/new", label: "Add Product", icon: PlusIcon },

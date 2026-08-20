@@ -96,34 +96,43 @@ const AddressForm = ({ addressToEdit, onClose }: AddressFormProps) => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
 
-    if (addressToEdit) {
-      const updatedAddress: Address = {
-        ...addressToEdit,
-        ...formData,
-      };
+    setSubmitting(true);
+    try {
+      if (addressToEdit) {
+        const updatedAddress: Address = {
+          ...addressToEdit,
+          ...formData,
+        };
 
-      useUserStore.getState().update_address(updatedAddress);
-      if (updatedAddress.isDefault) {
-        useUserStore.getState().set_default_address(updatedAddress._id);
+        await useUserStore.getState().update_address(updatedAddress);
+        if (updatedAddress.isDefault) {
+          await useUserStore.getState().set_default_address(updatedAddress._id);
+        }
+      } else {
+        const newAddress: Address = {
+          _id: Date.now().toString(),
+          lat: 0,
+          lng: 0,
+          ...formData,
+        };
+
+        await useUserStore.getState().add_address(newAddress);
+        if (newAddress.isDefault) {
+          await useUserStore.getState().set_default_address(newAddress._id);
+        }
       }
-    } else {
-      const newAddress: Address = {
-        _id: Date.now().toString(),
-        lat: 0,
-        lng: 0,
-        ...formData,
-      };
-
-      useUserStore.getState().add_address(newAddress);
-      if (newAddress.isDefault) {
-        useUserStore.getState().set_default_address(newAddress._id);
-      }
+      onClose();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSubmitting(false);
     }
-
-    onClose();
   };
 
   return (
@@ -266,9 +275,10 @@ const AddressForm = ({ addressToEdit, onClose }: AddressFormProps) => {
 
             <button
               type="submit"
-              className="rounded-lg bg-app-green px-5 py-2 text-white transition hover:opacity-90"
+              disabled={submitting}
+              className="rounded-lg bg-app-green px-5 py-2 text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Address
+              {submitting ? "Saving..." : "Save Address"}
             </button>
           </div>
         </form>
