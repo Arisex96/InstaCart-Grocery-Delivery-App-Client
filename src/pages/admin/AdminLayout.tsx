@@ -29,24 +29,24 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-app-cream">
       <Navbar />
-      <div className="flex flex-col flex-1 min-h-0 lg:flex-row gap-8 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <div className="flex flex-col flex-1 lg:flex-row lg:min-h-0 gap-8 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
         {/* Admin Sidebar */}
         <aside className="w-full lg:w-64 shrink-0 h-fit bg-white rounded-2xl p-4 border border-app-border">
-          <div className="pb-4 mb-4 border-b border-app-border">
+          <div className="hidden lg:block pb-4 mb-4 border-b border-app-border">
             <h2 className="text-lg font-semibold text-app-green flex items-center gap-2 px-2">
               <ShieldIcon className="size-5 text-green-900" /> Admin Panel
             </h2>
           </div>
-          <nav className="flex flex-col gap-1.5">
+          <nav className="flex flex-row overflow-x-auto lg:flex-col gap-2 lg:gap-1.5 no-scrollbar pb-2 lg:pb-0">
             {AdminLinkData.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 end={true}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 p-2.5 rounded-md text-sm transition-colors ${
+                  `flex items-center gap-3 p-2.5 rounded-md text-sm transition-colors shrink-0 ${
                     isActive
                       ? "bg-app-green text-white"
                       : "text-app-text-light hover:bg-orange-50 hover:text-zinc-900"
@@ -58,7 +58,7 @@ export default function AdminLayout() {
             ))}
           </nav>
         </aside>
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-20">
+        <main className="flex-1 lg:overflow-y-auto lg:no-scrollbar pb-20">
           <Outlet />
         </main>
       </div>
