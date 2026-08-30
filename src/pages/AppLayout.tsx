@@ -6,6 +6,7 @@ import CartSideBar from "../components/CartSideBar";
 import { Toaster } from "react-hot-toast";
 import { useEffect } from "react";
 import useUserStore from "../store/useUserStore";
+import ChatWidget from "../components/chat/ChatWidget";
 
 const AppLayout = () => {
   const loadAddresses = useUserStore((state) => state.loadAddresses);
@@ -30,6 +31,7 @@ const AppLayout = () => {
 
       <CartSideBar />
       <Toaster position="top-center" reverseOrder={false} />
+      <ChatWidget />
     </>
   );
 };

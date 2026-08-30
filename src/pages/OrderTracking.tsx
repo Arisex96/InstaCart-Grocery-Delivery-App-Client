@@ -491,11 +491,136 @@ const ItemsBox = ({ order }: { order: Order }) => {
   );
 };
 
+/**
+ * Decode an encoded polyline string (precision 5 for OSRM, 6 for Google/ORS).
+ * Returns array of [lat, lng] tuples.
+ */
+function decodePolyline(
+  encoded: string,
+  precision: number = 5,
+): [number, number][] {
+  const factor = Math.pow(10, precision);
+  const coordinates: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    coordinates.push([lat / factor, lng / factor]);
+  }
+
+  return coordinates;
+}
+
+/** Haversine distance in meters between two [lat, lng] points */
+function haversineDistance(a: [number, number], b: [number, number]): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * sinLng * sinLng;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+/**
+ * RouteLine – fetches a real road route from OSRM and renders it.
+ * Falls back to a straight dashed line if the API call fails.
+ * Only re-fetches when the rider moves more than ~150 m.
+ */
+function RouteLine({
+  from,
+  to,
+}: {
+  from: [number, number];
+  to: [number, number];
+}) {
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([
+    from,
+    to,
+  ]);
+  const [lastFetchedFrom, setLastFetchedFrom] = useState<
+    [number, number] | null
+  >(null);
+
+  useEffect(() => {
+    // Skip if rider hasn't moved significantly
+    if (lastFetchedFrom && haversineDistance(lastFetchedFrom, from) < 150) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchRoute = async () => {
+      try {
+        // OSRM expects lng,lat order
+        const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=polyline`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.code === "Ok" && data.routes?.[0]?.geometry) {
+          const decoded = decodePolyline(data.routes[0].geometry, 5);
+          if (decoded.length >= 2) {
+            setRouteCoords(decoded);
+            setLastFetchedFrom(from);
+          }
+        }
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.warn("Route fetch failed, using straight line:", err.message);
+          setRouteCoords([from, to]);
+        }
+      }
+    };
+
+    fetchRoute();
+    return () => controller.abort();
+  }, [from[0], from[1], to[0], to[1]]);
+
+  return (
+    <Polyline
+      positions={routeCoords}
+      pathOptions={{
+        color: "#16a34a",
+        weight: 5,
+        opacity: 0.8,
+        dashArray: undefined,
+      }}
+    />
+  );
+}
+
 const DeliveryMap = ({ order }: { order: Order }) => {
   const customerLat = parseFloat(order.shippingAddress.lat as any);
   const customerLng = parseFloat(order.shippingAddress.lng as any);
   const customer: [number, number] = [
-    isNaN(customerLat) || customerLat === 0 ? 12.9716 : customerLat, // default fallback to a valid coordinate if 0 or NaN
+    isNaN(customerLat) || customerLat === 0 ? 12.9716 : customerLat,
     isNaN(customerLng) || customerLng === 0 ? 77.5946 : customerLng,
   ];
 
@@ -598,8 +723,8 @@ const DeliveryMap = ({ order }: { order: Order }) => {
           </Marker>
         )}
 
-        {/* Line between them */}
-        {hasRiderLocation && <Polyline positions={[rider, customer]} />}
+        {/* Road-based route between rider and customer */}
+        {hasRiderLocation && <RouteLine from={rider} to={customer} />}
       </MapContainer>
     </section>
   );

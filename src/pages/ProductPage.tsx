@@ -5,9 +5,11 @@ import { ArrowLeft, CheckIcon, Leaf, Star, XIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useMemo, useEffect } from "react";
 import useCartStore from "../store/useCartStore";
+import useUserStore from "../store/useUserStore";
 import ProductGrid from "../components/ProductGrid";
 import api from "../api/axios";
 import type { Product } from "../types";
+import toast from "react-hot-toast";
 
 const HalfStar = ({ size = 16 }: { size?: number }) => (
   <div
@@ -39,6 +41,12 @@ const ProductPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const user = useUserStore();
+  const isLoggedIn = !!user.email;
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +70,10 @@ const ProductPage = () => {
           reviewCount: p.reviewCount,
           discount: p.discount ?? 0,
         };
-        if (!cancelled) setProduct(mapped);
+        if (!cancelled) {
+          setProduct(mapped);
+          setDbReviews(p.reviews || []);
+        }
 
         const simRes = await api.get("/products", {
           params: { category: p.category },
@@ -99,11 +110,76 @@ const ProductPage = () => {
     };
   }, [productId]);
 
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) {
+      toast.error("Please enter a comment");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const { data } = await api.post(`/products/${productId}/reviews`, {
+        rating: newRating,
+        comment: newComment,
+      });
+      if (data.success) {
+        toast.success("Review submitted successfully!");
+        setNewComment("");
+        setNewRating(5);
+        setDbReviews((prev) => [data.review, ...prev]);
+
+        // Refresh the product details to update rating and reviewCount
+        const prodRes = await api.get(`/products/${productId}`);
+        const p = prodRes.data.product;
+        const mapped: Product = {
+          _id: p.id,
+          name: p.name,
+          description: p.description ?? "",
+          price: p.price,
+          originalPrice: p.originalPrice,
+          image: p.image,
+          category: p.category,
+          unit: p.unit,
+          stock: p.stock,
+          isOrganic: p.isOrganic,
+          rating: p.rating,
+          reviewCount: p.reviewCount,
+          discount: p.discount ?? 0,
+        };
+        setProduct(mapped);
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.response?.data?.message || "Failed to submit review";
+      toast.error(errMsg);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   const reviews = useMemo(() => {
     if (!product) return [];
+
+    const dbMappedReviews = dbReviews.map((r: any) => ({
+      _id: r.id,
+      productId: r.productId,
+      userImage:
+        r.user?.avatar ||
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.user?.name || "User")}`,
+      name: r.user?.name || "Anonymous",
+      date: r.createdAt,
+      rating: r.rating,
+      comment: r.comment,
+    }));
+
     const staticReviews = dummyReviews.filter(
       (r) => r.productId === product._id,
     );
+
+    if (dbMappedReviews.length > 0) {
+      return [...dbMappedReviews, ...staticReviews];
+    }
+
     if (staticReviews.length > 0) {
       return staticReviews;
     }
@@ -152,7 +228,7 @@ const ProductPage = () => {
       });
     }
     return list;
-  }, [product]);
+  }, [product, dbReviews]);
 
   if (loading) {
     return (
@@ -296,9 +372,78 @@ const ProductPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {/* Left Column (Breakdown) */}
-            <div className="md:col-span-1">
+            {/* Left Column (Breakdown & Add Review) */}
+            <div className="md:col-span-1 flex flex-col gap-6">
               <RatingBar product={product} reviews={reviews} />
+
+              <div className="bg-white rounded-xl border border-zinc-100 p-5 shadow-sm">
+                <h3 className="text-lg font-semibold text-black mb-4">
+                  Add a Review
+                </h3>
+                {isLoggedIn ? (
+                  <form
+                    onSubmit={handleReviewSubmit}
+                    className="flex flex-col gap-4"
+                  >
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                        Your Rating
+                      </span>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNewRating(star)}
+                            className="focus:outline-none transition-transform hover:scale-110"
+                          >
+                            <Star
+                              size={24}
+                              className={
+                                star <= newRating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "fill-gray-200 text-gray-200"
+                              }
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                        Review Comment
+                      </span>
+                      <textarea
+                        required
+                        rows={3}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Share your thoughts about this product..."
+                        className="w-full text-sm border border-zinc-200 rounded-lg p-2.5 bg-zinc-50 focus:bg-white focus:border-app-green focus:ring-1 focus:ring-app-green outline-none resize-none transition-all duration-200"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="bg-app-green hover:bg-app-green-dark text-white rounded-lg py-2.5 font-semibold text-sm transition-all shadow-sm focus:outline-none disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {submittingReview ? "Submitting..." : "Submit Review"}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="text-center py-4 bg-zinc-50 rounded-lg border border-dashed border-zinc-200">
+                    <p className="text-sm text-zinc-500 mb-2">
+                      You need to be logged in to write a review
+                    </p>
+                    <button
+                      onClick={() => navigate("/login")}
+                      className="text-xs font-bold text-app-green hover:underline focus:outline-none"
+                    >
+                      Login / Sign Up
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Column (Reviews List) */}
