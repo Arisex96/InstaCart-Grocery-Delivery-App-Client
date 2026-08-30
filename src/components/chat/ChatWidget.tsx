@@ -3,9 +3,11 @@ import { MessageSquareText, Sparkles, X } from "lucide-react";
 import type { Message } from "./types";
 import { sendChatMessage } from "./chatService";
 import ChatWindow from "./ChatWindow";
+import useUserStore from "../../store/useUserStore";
 
 const ChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { _id: userId } = useUserStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "init",
@@ -31,10 +33,11 @@ const ChatWidget: React.FC = () => {
 
     try {
       // 2. Fetch AI response from the modular service layer
-      const responseText = await sendChatMessage(content, [
-        ...messages,
-        userMessage,
-      ]);
+      const responseText = await sendChatMessage(
+        content,
+        [...messages, userMessage],
+        userId,
+      );
 
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,

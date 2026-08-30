@@ -15,6 +15,7 @@ const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 export async function sendChatMessage(
   messageText: string,
   _chatHistory: Message[],
+  userId?: string,
 ): Promise<string> {
   const trimmed = messageText.trim();
   if (!trimmed) {
@@ -24,7 +25,10 @@ export async function sendChatMessage(
   try {
     const response = await axios.post(
       `${RAG_API_URL}/chat`,
-      { message: trimmed },
+      {
+        message: trimmed,
+        user_id: userId || "anonymous",
+      },
       { timeout: 15000 }, // 15 seconds timeout
     );
 
