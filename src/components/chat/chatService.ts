@@ -4,14 +4,6 @@ import type { Message } from "./types";
 // Retrieve the RAG API URL from environment variables, defaulting to port 8000
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
-/**
- * Sends a chat message to the Python FastAPI RAG Assistant and retrieves the response.
- * Uses the API URL defined in VITE_RAG_API_URL.
- *
- * @param messageText - The current message from the user
- * @param _chatHistory - The array of previous messages in the current session
- * @returns The assistant's response string
- */
 export async function sendChatMessage(
   messageText: string,
   _chatHistory: Message[],
