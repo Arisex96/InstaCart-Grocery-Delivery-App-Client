@@ -1,0 +1,43 @@
+/**
+ * The handful of lucide-react icons the exercises use. Re-exported by name so
+ * the sandbox bundle ships ~25 icons instead of the whole icon set. Both the
+ * plain and "Icon"-suffixed names exist because the real app uses both styles.
+ */
+export {
+  AlertCircle,
+  AlertCircleIcon,
+  Check,
+  CheckIcon,
+  ChevronLeft,
+  ChevronLeftIcon,
+  ChevronRight,
+  ChevronRightIcon,
+  Heart,
+  HeartIcon,
+  Inbox,
+  InboxIcon,
+  Leaf,
+  LeafIcon,
+  Loader2,
+  Loader2Icon,
+  MapPin,
+  MapPinIcon,
+  Minus,
+  MinusIcon,
+  Plus,
+  PlusIcon,
+  RefreshCw,
+  RefreshCwIcon,
+  Search,
+  SearchIcon,
+  ShoppingCart,
+  ShoppingCartIcon,
+  SlidersHorizontal,
+  SlidersHorizontalIcon,
+  Star,
+  StarIcon,
+  Trash2,
+  Trash2Icon,
+  X,
+  XIcon,
+} from "lucide-react";

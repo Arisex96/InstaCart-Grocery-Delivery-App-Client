@@ -21,7 +21,8 @@ export async function sendChatMessage(
         message: trimmed,
         user_id: userId || "anonymous",
       },
-      { timeout: 15000 }, // 15 seconds timeout
+      // Embeddings and the model call can take longer on a cold start.
+      { timeout: 60000 },
     );
 
     if (response.data && typeof response.data.answer === "string") {
@@ -33,6 +34,10 @@ export async function sendChatMessage(
     console.error("RAG API Call Failed:", error);
 
     // 1. Network level error (server is offline or port blocked)
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      return "The AI assistant took too long to respond. Please try again.";
+    }
+
     if (error.code === "ERR_NETWORK" || !error.response) {
       return "The AI assistant is currently offline. Please ensure the Python RAG service is running on Port 8000 (run `python app.py` from the `rag` folder).";
     }
@@ -43,6 +48,10 @@ export async function sendChatMessage(
 
     if (status === 503) {
       return "RAG AI service is starting up or has a missing API configuration (e.g. MISTRAL_API_KEY). Please confirm your `.env` values.";
+    }
+
+    if (status === 429) {
+      return "The AI provider is temporarily rate-limited. Please try again in a moment.";
     }
 
     if (detail) {

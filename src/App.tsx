@@ -20,6 +20,7 @@ import AdminDeliveryPartners from "./pages/admin/AdminDeliveryPartners";
 import DeliveryLogin from "./pages/delivery/DeliveryLogin";
 import DeliveryLayout from "./pages/delivery/DeliveryLayout";
 import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+import FrontendPracticeLab from "./features/frontend-practice";
 
 const App = () => (
   <>
@@ -58,6 +59,10 @@ const App = () => (
       <Route path="delivery" element={<DeliveryLayout />}>
         <Route index element={<DeliveryDashboard />} />
       </Route>
+
+      {/** Frontend practice lab (learning sandbox, isolated from store data) */}
+      <Route path="practice" element={<FrontendPracticeLab />} />
+      <Route path="practice/:id" element={<FrontendPracticeLab />} />
     </Routes>
   </>
 );
